@@ -1,13 +1,25 @@
 import os
 import requests
 
-from fastapi import FastAPI, HTTPException, Response, Header
+from fastapi import FastAPI, HTTPException, Response, Header, Request
 
 from dotenv import load_dotenv
 load_dotenv()
 
 # FastApi instance and load env variables
 app = FastAPI()
+
+# CORS Middleware for Vite React frontend
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Vite default listening port
+    allow_credentials=True,                   # Allow cookies
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 ROBLE_API_BASE_URL = os.getenv("ROBLE_API_BASE_URL")
 ROBLE_PROJECT_NAME = os.getenv("ROBLE_PROJECT_NAME")
 
@@ -81,7 +93,7 @@ def login(post_data: dict, response: Response):
     # Set cookie for refresh token
     if refresh_token:
         # set cookie httponly
-        response.set_cookie(key="refreshToken", value=refresh_token, httponly=True, samesite="lax")
+        response.set_cookie(key="refreshToken", value=refresh_token, httponly=True, samesite="Lax")
         # Remove refresh token from response body
         body.pop("refresh_token", None)
     
@@ -115,7 +127,41 @@ def verify_token(authorization: str = Header(default="")):
     return r.json() # Return Roble whole json response could parse it later if needed
     
         
-#@app.post("/refresh-token")
+@app.post("/refresh-token")
+def refresh_token(request: Request, response: Response):
+    # Get refresh token from cookies
+    refresh_token = request.cookies.get("refreshToken")
+    if not refresh_token:
+        raise HTTPException(status_code=400, detail="Missing refresh token cookie")
+    url = f"{ROBLE_API_BASE_URL}/auth/{ROBLE_PROJECT_NAME}/refresh-token"
+    # Send POST request to Roble
+    try:
+        r = requests.post(url, json={
+            "refreshToken": refresh_token
+        }, timeout=20)
+        print(f"\n[!]Sending request to ROBLE: {url}\n Status code: {r.status_code}\n Response: {r.text}\n")
+        if r.status_code >=400:
+            raise HTTPException(status_code=r.status_code, detail=f"{r.json()}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=400, detail=f"Error connecting to Roble: {e}")
+    
+    if r.status_code >= 400:
+        raise HTTPException(status_code=r.status_code, detail=r.text)
+
+    data = r.json()
+
+    # If new refresh token is provided, update cookie
+    new_refresh_token = data.get("refreshToken")
+    if new_refresh_token:
+        # Update cookie for refresh token
+        response.set_cookie(key="refreshToken", value=new_refresh_token, httponly=True, samesite="Lax")
+    
+    # Return new access token
+    access_token = data.get("accessToken")
+    if not access_token:
+        raise HTTPException(status_code=500, detail="Missing access token in Roble response")
+    return {"accessToken": access_token}
+
 #@app.post("/logout")
 
 
