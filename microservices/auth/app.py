@@ -166,7 +166,11 @@ def refresh_token(request: Request, response: Response):
         raise HTTPException(status_code=500, detail="Missing access token in Roble response")
     return {"accessToken": access_token}
 
-#@app.post("/logout")
+@app.post("/logout")
+def logout(response: Response):
+    # Clear the refresh token cookie
+    response.delete_cookie(key="refreshToken")
+    return {"message": "Logged out"}    
 
 
 #Refactor into more functions

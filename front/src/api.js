@@ -1,13 +1,13 @@
 let ACCESS_TOKEN = null;
 
 // Setter for Access Token
-export const setAccessToken = (t) => {
-  ACCESS_TOKEN = t;
-}
+export const setAccessToken = (t) => { ACCESS_TOKEN = t; };
+export const getAccessToken = () => ACCESS_TOKEN;
+export const clearAccessToken = () => { ACCESS_TOKEN = null; };
 
 // Function to refresh Access Token using the Refresh Token stored in HttpOnly cookie
-async function refreshAccessToken() {
-    const res = await fetch("http://localhost:8000/auth/refresh-token", {
+export async function refreshAccessToken() {
+    const res = await fetch("http://localhost:8000/refresh-token", {
         method: "POST",
         credentials: "include"
     });

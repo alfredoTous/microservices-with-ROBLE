@@ -1,6 +1,9 @@
-import { Route, Routes, Link } from "react-router-dom";
+import { Route, Routes, Link, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import ProtectedRoute from "./protectedRoute";
+import { getAccessToken } from "./api";
 
 export default function App() {
     return (
@@ -8,12 +11,24 @@ export default function App() {
       <nav style={{ display: "flex", gap: 12, marginBottom: 16 }}>
         <Link to="/login">Login</Link>
         <Link to="/register">Register</Link>
+        <Link to="/dashboard">Dashboard</Link>
       </nav>
 
+
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" 
+          element={getAccessToken() ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        
+        <Route path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </div>
     );
