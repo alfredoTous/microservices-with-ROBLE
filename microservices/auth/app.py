@@ -69,7 +69,7 @@ def login(post_data: dict, response: Response):
     password = post_data.get("password")    
 
     if not email or not password or "@" not in email or "." not in email:
-        raise HTTPException(status_code=400, detail="Incorrect parameters")
+        raise HTTPException(status_code=400, detail="Bad email or password")
     if len(password) < 8 :
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
@@ -86,7 +86,11 @@ def login(post_data: dict, response: Response):
         raise HTTPException(status_code=400, detail=f"Error connecting to Roble: {e}")
     
     if r.status_code >=400:
-        raise HTTPException(status_code=r.status_code, detail=r.json)
+        try:
+            error_detail = r.json()
+        except ValueError:
+            error_detail = r.text
+        raise HTTPException(status_code=r.status_code, detail=error_detail)
     
     body = r.json()
     refresh_token = body.get("refreshToken")
@@ -95,7 +99,7 @@ def login(post_data: dict, response: Response):
         # set cookie httponly
         response.set_cookie(key="refreshToken", value=refresh_token, httponly=True, samesite="Lax")
         # Remove refresh token from response body
-        body.pop("refresh_token", None)
+        body.pop("refreshToken", None)
     
     response.status_code = r.status_code 
     return {
@@ -164,6 +168,8 @@ def refresh_token(request: Request, response: Response):
 
 #@app.post("/logout")
 
+
+#Refactor into more functions
 
 
 
