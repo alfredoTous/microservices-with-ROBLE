@@ -173,6 +173,28 @@ def logout(response: Response):
     return {"message": "Logged out"}    
 
 
+# Function to validate protected routes
+@app.get("/guard")
+def guard(authorization: str = Header(default="")):
+    # Validate access token
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="missing_access_token")
+
+    # Verify access token with Roble
+    url = f"{ROBLE_API_BASE_URL}/auth/{ROBLE_PROJECT_NAME}/verify-token"
+    try:
+        r = requests.get(url, headers={"Authorization": authorization}, timeout=20)
+    except requests.RequestException:
+        raise HTTPException(502, "error contacting Roble")
+
+    if r.status_code == 200:
+        return {"ok": True}
+    if r.status_code == 403:
+        raise HTTPException(403, "forbidden")
+
+    # 401 or other errors
+    raise HTTPException(r.status_code, r.text)
+
 #Refactor into more functions
 
 

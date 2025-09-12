@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { apiFetch, setAccessToken } from "../api";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() { 
+    const nav = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [log, setLog] = useState("");
@@ -25,6 +27,8 @@ export default function Login() {
 
         setAccessToken(data.accessToken || null);
         setLog("Login successful");
+        await new Promise(resolve => setTimeout(resolve, 600)); // Small delay to show success message
+        nav("/dashboard", { replace: true }); // Redirect to protected dashboard
     }
 
     // Verify function to check if Access Token is valid
