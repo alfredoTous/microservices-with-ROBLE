@@ -1,17 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getAccessToken } from "./api";
+import { getAccessToken, setAccessToken, refreshAccessToken } from "./api";
 
 // Protect a route, ensuring user is authenticated
 // If not authenticated try to refresh token, then redirect to login if that fails
 export default function ProtectedRoute({ children }) {
     const [status, setStatus] = useState("checking"); // "checking", "ok", "not_logged_in"
 
-    // On mount, ensure we are authenticated or redirect to login  
+    // On mount, ensure we are authenticated or redirect to login
     useEffect(() => {
         async function ensureAuth() {
-        const access_token = getAccessToken();
-        if (!access_token) { setStatus("not_logged_in"); return; } // No AT, not logged in
+        let access_token = getAccessToken();
+        if (!access_token) { 
+            try {
+                access_token = await refreshAccessToken();
+            } catch {
+                access_token = null;
+            }
+        }
+
+        if (!access_token) {
+            setStatus("not_logged_in");
+            return;
+        }
 
         // Validate access token with backend
         try {
@@ -20,7 +31,12 @@ export default function ProtectedRoute({ children }) {
             headers: { Authorization: `Bearer ${access_token}` },
             credentials: "include",
             });
-            setStatus(res.ok ? "ok" : "not_logged_in");
+            if (res.ok) {
+                setAccessToken(access_token);
+                setStatus("ok");
+            } else {
+                setStatus("not_logged_in");
+            }
         } catch {
             setStatus("not_logged_in");
         }
