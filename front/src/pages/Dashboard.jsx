@@ -1,4 +1,5 @@
 import { clearAccessToken } from "../api";
+import { Link } from "react-router-dom";
 
 export default function Dashboard() {
     // Function to handle logout
@@ -17,7 +18,12 @@ export default function Dashboard() {
         <div>
             <h2>Dashboard</h2>
             <p>Only visible if logged in</p> 
-            <button onClick={doLogout}>Logout</button>
+            <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+                <Link to="/create">
+                <button>➕ Agregar microservicio</button>
+                </Link>
+                <button onClick={doLogout}>Logout</button>
+            </div>
         </div>
     );
 }
