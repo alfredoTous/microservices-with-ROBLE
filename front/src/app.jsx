@@ -2,7 +2,7 @@ import { Route, Routes, Link, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import ProtectedRoute from "./protectedRoute";
+import ProtectedRoute from "./ProtectedRoute";
 import { getAccessToken } from "./api";
 
 export default function App() {
