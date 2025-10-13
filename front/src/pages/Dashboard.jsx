@@ -74,24 +74,37 @@ export default function Dashboard() {
   }
   // 🗑️Delete microservice
   async function handleDelete(name) {
-  const confirmed = window.confirm(`Are you sure you want to delete '${name}'?`);
-  if (!confirmed) return;
+    const confirmed = window.confirm(`Are you sure you want to delete '${name}'?`);
+    if (!confirmed) return;
 
-  setLog(`Deleting microservice ${name}...`);
-  try {
-    const res = await fetch("http://localhost:8000/delete-microservice", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Error removing microservice");
-    setLog(`🗑️ ${data.message}`);
-    fetchMicroservices(); // Refresh list
-  } catch (err) {
-    setLog(`❌ Error: ${err.message}`);
+    setLog(`Deleting microservice ${name}...`);
+    try {
+      const res = await fetch("http://localhost:8000/delete-microservice", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Error removing microservice");
+      setLog(`🗑️ ${data.message}`);
+      fetchMicroservices(); // Refresh list
+    } catch (err) {
+      setLog(`❌ Error: ${err.message}`);
+    }
   }
-}
+
+  async function handleRunMicroservice(name) {
+    setLog(`Exdcuting microservice '${name}'...`);
+    try {
+      const res = await fetch(`http://localhost:8000/microservices/${name}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Error executing microservice");
+      setLog(`✅ ${name} → ${JSON.stringify(data)}`);
+    } catch (err) {
+      setLog(`❌ Error: ${err.message}`);
+    }
+  }
+
 
 
   return (
@@ -245,6 +258,15 @@ export default function Dashboard() {
                 >
                   🗑️ Delete
                 </button>
+
+                <button
+                  onClick={() => (window.location.href = `/microservices/${m.name}`)}
+                  style={actionBtn("#00e676")}
+                >
+                  🚀 Run
+                </button>
+
+                  
               </div>
             </div>
           ))}

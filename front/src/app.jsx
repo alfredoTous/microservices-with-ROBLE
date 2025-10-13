@@ -6,7 +6,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import { getAccessToken } from "./api";
 import CreateMicroservice from "./pages/CreateMicroservice";
 import EditMicroservice from "./pages/EditMicroservice";
-
+import MicroserviceView from "./pages/MicroserviceView";
 
 
 export default function App() {
@@ -45,6 +45,15 @@ export default function App() {
             <EditMicroservice />
           </ProtectedRoute>
         } />
+
+        <Route
+          path="/microservices/:name"
+          element={
+            <ProtectedRoute>
+              <MicroserviceView />
+            </ProtectedRoute>
+          }
+        />
 
       </Routes>
     </div>

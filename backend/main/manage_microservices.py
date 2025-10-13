@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Response
 import subprocess
+import requests
 
 router = APIRouter()
 
@@ -35,6 +36,7 @@ def create_microservice(data: dict = Body(...)):
                 f.write(f"# {description}\n\n")
             f.write("from fastapi import FastAPI\n")
             f.write("app = FastAPI()\n\n")
+            f.write("@app.get('/')\n")
             f.write(code.strip() + "\n\n")
             f.write(
                 "\n@app.get('/test')\n"
@@ -260,3 +262,29 @@ def save_microservice_code(data: dict = Body(...)):
 
     return {"ok": True, "message": f"Code for microservice {name} updated successfully."}
 
+@router.get("/microservices/{name}")
+def forward_microservice_root(name: str):
+    # Forwards the request to the microservice's root endpoint and returns its response
+    name = name.strip().lower()
+    data = list_microservices()["microservices"]
+    info = next((m for m in data if m["name"] == name), None)
+
+    if not info:
+        raise HTTPException(404, f"Microservice '{name}' not found")
+    if not info["running"]:
+        raise HTTPException(400, f"Microservice '{name}' is not on execution")
+    port = info.get("port")
+    if not port:
+        raise HTTPException(400, f"Port of microservice '{name}' not found")
+
+    url = f"http://localhost:{port}/"
+    print(f"[FORWARD] {name} → {url}")
+    try:
+        r = requests.get(url, timeout=5)
+        return Response(
+            content=r.content,
+            status_code=r.status_code,
+            media_type=r.headers.get("content-type", "application/json")
+        )
+    except requests.RequestException as e:
+        raise HTTPException(502, f"Error connecting to {url}: {e}")
