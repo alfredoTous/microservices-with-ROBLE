@@ -62,3 +62,30 @@ CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 
     except Exception as e:
         raise HTTPException(500, f"Error creating microservice: {e}")
+    
+
+@router.get("/list-microservices")
+def list_microservices():
+    # Returns a list of microservices with their status and useful information
+    if not MICROSERVICES_PATH.exists():
+        return {"microservices": []}
+
+    microservices = []
+
+    for folder in MICROSERVICES_PATH.iterdir():
+        if not folder.is_dir():
+            continue
+
+        app_file = folder / "app.py"
+        docker_file = folder / "Dockerfile"
+
+        microservices.append({
+            "name": folder.name,
+            "has_app": app_file.exists(),
+            "has_dockerfile": docker_file.exists(),
+            "running": False,
+            "path": str(folder.resolve())
+        })
+
+    return {"microservices": microservices}
+
