@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Body
+import subprocess
 
 router = APIRouter()
 
@@ -32,7 +33,14 @@ def create_microservice(data: dict = Body(...)):
         with open(app_file, "w", encoding="utf-8") as f:
             if description:
                 f.write(f"# {description}\n\n")
-            f.write(code + "\n")
+            f.write("from fastapi import FastAPI\n")
+            f.write("app = FastAPI()\n\n")
+            f.write(code.strip() + "\n\n")
+            f.write(
+                "\n@app.get('/test')\n"
+                "def test():\n"
+                "    return {'status': 'ok', 'message': 'Microservicio activo'}\n"
+            )
 
         # Create Dockerfile
         dockerfile = service_path / "Dockerfile"
@@ -47,10 +55,9 @@ COPY . /app
 # Install dependencies
 RUN pip install fastapi uvicorn
 
-# expose port
+# Expose port
 EXPOSE 8000
-
-# command to run the app
+# Command to run the app
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 """)
 
@@ -70,22 +77,142 @@ def list_microservices():
     if not MICROSERVICES_PATH.exists():
         return {"microservices": []}
 
+    running_names = set()
+    try:
+        ps_output = subprocess.check_output(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            text=True,
+            stderr=subprocess.DEVNULL
+        ).strip()
+        if ps_output:
+            running_names = set(ps_output.splitlines())
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"[WARN] `docker ps` could not be executed: {e}")
+        running_names = set()
+
     microservices = []
 
     for folder in MICROSERVICES_PATH.iterdir():
         if not folder.is_dir():
             continue
 
+        name = folder.name
         app_file = folder / "app.py"
         docker_file = folder / "Dockerfile"
+        running = f"{name}_container" in running_names
 
         microservices.append({
-            "name": folder.name,
+            "name": name,
             "has_app": app_file.exists(),
             "has_dockerfile": docker_file.exists(),
-            "running": False,
+            "running": running,
             "path": str(folder.resolve())
         })
 
     return {"microservices": microservices}
+
+@router.post("/start-microservice")
+def start_microservice(data: dict = Body(...)):
+    # Start a Docker container for the microservice, building the image if needed
+    name = data.get("name", "").strip().lower()
+    if not name:
+        raise HTTPException(400, "Missing microservice name")
+
+    service_path = MICROSERVICES_PATH / name
+    if not service_path.exists():
+        raise HTTPException(404, f"Microservicio '{name}' no encontrado")
+
+    image_name = f"{name}_image"
+    container_name = f"{name}_container"
+
+    # Verify if image exists, if not build it
+    images = subprocess.getoutput("docker images --format '{{.Repository}}'").splitlines()
+    if image_name not in images:
+        print(f"[INFO] Image '{image_name}' not found, building...")
+        try:
+            subprocess.run(
+                ["docker", "build", "-t", image_name, str(service_path)],
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise HTTPException(500, f"Error building image: {e}")
+
+    # If container is already running, do nothing
+    containers = subprocess.getoutput("docker ps --format '{{.Names}}'").splitlines()
+    if container_name in containers:
+        return {"ok": True, "message": f"Microservice '{name}' already running."}
+
+    # If container exists but is stopped, remove it
+    subprocess.run(["docker", "rm", "-f", container_name], check=False)
+
+    # Run the container
+    try:
+        run = subprocess.run(
+            [
+                "docker", "run", "-d",
+                "--name", container_name,
+                "-p", "0:8000",
+                image_name,
+            ],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        container_id = run.stdout.strip()
+        print(f"[OK] Container {container_name} started ({container_id})")
+
+        return {
+            "ok": True,
+            "message": f"Microservice '{name}' started correctly.",
+            "container_id": container_id
+        }
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, f"Error starting microservice: {e.stderr or e}")
+
+
+@router.post("/stop-microservice")
+def stop_microservice(data: dict = Body(...)):
+
+    # Stop container if running
+    name = data.get("name", "").strip().lower()
+    if not name:
+        raise HTTPException(400, "Missing microservice name")
+
+    container_name = f"{name}_container"
+
+    # Test if container is running
+    containers = subprocess.getoutput("docker ps --format '{{.Names}}'").splitlines()
+    if container_name not in containers:
+        return {"ok": True, "message": f"Microservice '{name}' is already stop."}
+
+    try:
+        subprocess.run(["docker", "stop", container_name], check=True)
+        return {"ok": True, "message": f"Microservice '{name}' stopped successfully."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, f"Error stopping microservice: {e}")
+
+@router.delete("/delete-microservice")
+def delete_microservice(data: dict = Body(...)):
+    # Delete container, image and microservice files
+    name = data.get("name", "").strip().lower()
+    if not name:
+        raise HTTPException(400, "Missing microservice name")
+
+    container_name = f"{name}_container"
+    image_name = f"{name}_image"
+    service_path = MICROSERVICES_PATH / name
+
+    try:
+        # stop and remove container 
+        subprocess.run(["docker", "rm", "-f", container_name], check=False)
+        # remove image
+        subprocess.run(["docker", "rmi", "-f", image_name], check=False)
+        # remove files
+        if service_path.exists():
+            import shutil
+            shutil.rmtree(service_path)
+        return {"ok": True, "message": f"Microservice '{name}' deleted comppletely."}
+    except Exception as e:
+        raise HTTPException(500, f"Error deleting microservice: {e}")
+
 

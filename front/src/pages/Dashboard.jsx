@@ -3,40 +3,60 @@ import { clearAccessToken } from "../api";
 import { Link } from "react-router-dom";
 
 export default function Dashboard() {
-    const [microservices, setMicroservices] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [log, setLog] = useState("");
+  const [microservices, setMicroservices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [log, setLog] = useState("");
 
-    // At load time, fetch microservices on backend
-    useEffect(() => {
-        async function fetchMicroservices() {
-        try {
-            const res = await fetch("http://localhost:8000/list-microservices");
-            const data = await res.json();
-            setMicroservices(data.microservices || []);
-        } catch (err) {
-            console.error("Error obteniendo microservicios:", err);
-            setLog("Error cargando microservicios");
-        } finally {
-            setLoading(false);
-        }
-        }
-        fetchMicroservices();
-    }, []);
+  // At load time, fetch microservices on backend
+  async function fetchMicroservices() {
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/list-microservices");
+      const data = await res.json();
+      setMicroservices(data.microservices || []);
+    } catch (err) {
+      console.error("Error obteniendo microservicios:", err);
+      setLog("Error cargando microservicios");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    // Function to handle logout
-    async function doLogout() {
-        clearAccessToken();
-        try {
-            await fetch("http://localhost:8000/logout", {
-                method: "POST",
-                credentials: "include"
-            });
-        } catch {}
-        window.location.href = "/login"; // Redirect to login page
+  useEffect(() => {
+    fetchMicroservices();
+  }, []);
+
+  async function doLogout() {
+    clearAccessToken();
+    try {
+      await fetch("http://localhost:8000/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch {}
+    window.location.href = "/login"; // Redirect to login page
     }
     
-    return (
+
+  // ⛔ Turn off microservice
+  async function stopService(name) {
+    setLog(`Stopping Microservice ${name}...`);
+    try {
+      const res = await fetch("http://localhost:8000/stop-microservice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Error stopping microservice");
+      setLog(`🛑 ${data.message}`);
+      fetchMicroservices(); // Refresh list
+    } catch (err) {
+      setLog(`❌ Error: ${err.message}`);
+    }
+  }
+
+  return (
     <div
       style={{
         maxWidth: 900,
@@ -143,7 +163,9 @@ export default function Dashboard() {
                 }}
               >
                 <button
-                  onClick={() => alert(`Toggle ${m.name}`)}
+                  onClick={() =>
+                    m.running ? stopService(m.name) : startService(m.name)
+                  }
                   style={{
                     flex: 1,
                     background: m.running ? "#ff5252" : "#00e676",
