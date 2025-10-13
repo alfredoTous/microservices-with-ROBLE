@@ -24,7 +24,7 @@ def hello():
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Unknown error");
       setLog(data.message);
-      setTimeout(() => navigate("/dashboard"), 2500);
+      setTimeout(() => navigate("/dashboard"), 2000);
     } catch (err) {
       setLog(`Error: ${err.message}`);
     }

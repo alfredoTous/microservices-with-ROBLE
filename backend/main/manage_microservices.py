@@ -27,16 +27,38 @@ def create_microservice(data: dict = Body(...)):
     try:
         os.makedirs(service_path, exist_ok=True)
 
+        # Create app.py with user code
         app_file = service_path / "app.py"
         with open(app_file, "w", encoding="utf-8") as f:
             if description:
                 f.write(f"# {description}\n\n")
             f.write(code + "\n")
 
+        # Create Dockerfile
+        dockerfile = service_path / "Dockerfile"
+        dockerfile.write_text(f"""# Dockerfile for microservice {safe_name}
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy code
+COPY . /app
+
+# Install dependencies
+RUN pip install fastapi uvicorn
+
+# expose port
+EXPOSE 8000
+
+# command to run the app
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+""")
+
         return {
             "ok": True,
-            "message": f"Microservies '{safe_name}' created successfully",
+            "message": f"Microservice '{safe_name}' created successfully",
             "path": str(app_file),
         }
+
     except Exception as e:
         raise HTTPException(500, f"Error creating microservice: {e}")
