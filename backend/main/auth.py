@@ -1,24 +1,13 @@
 import os
 import requests
 
-from fastapi import FastAPI, HTTPException, Response, Header, Request
+from fastapi import APIRouter, HTTPException, Response, Header, Request
 
 from dotenv import load_dotenv
 load_dotenv()
 
-# FastApi instance and load env variables
-app = FastAPI()
-
-# CORS Middleware for Vite React frontend
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite default listening port
-    allow_credentials=True,                   # Allow cookies
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# FastApi APIRouter instance and load env variables
+router = APIRouter()
 
 ROBLE_API_BASE_URL = os.getenv("ROBLE_API_BASE_URL")
 ROBLE_PROJECT_NAME = os.getenv("ROBLE_PROJECT_NAME")
@@ -41,7 +30,7 @@ def create_user(email, name, password):
     return r.status_code, r.json()
 
 # Microservice Register endpoint
-@app.post("/register")
+@router.post("/register")
 def register(post_data: dict, response: Response):
     
     # Validate POST data
@@ -61,7 +50,7 @@ def register(post_data: dict, response: Response):
 
 
 # Microservice Login endpoint
-@app.post("/login")
+@router.post("/login")
 def login(post_data: dict, response: Response):
     
     # Validate POST data
@@ -109,7 +98,7 @@ def login(post_data: dict, response: Response):
 
 
 # Microservice verify-token endpoint
-@app.get("/verify-token")
+@router.get("/verify-token")
 def verify_token(authorization: str = Header(default="")):
     # Validate access token
     if not authorization.startswith("Bearer "):
@@ -131,7 +120,7 @@ def verify_token(authorization: str = Header(default="")):
     return r.json() # Return Roble whole json response could parse it later if needed
     
         
-@app.post("/refresh-token")
+@router.post("/refresh-token")
 def refresh_token(request: Request, response: Response):
     # Get refresh token from cookies
     refresh_token = request.cookies.get("refreshToken")
@@ -166,7 +155,7 @@ def refresh_token(request: Request, response: Response):
         raise HTTPException(status_code=500, detail="Missing access token in Roble response")
     return {"accessToken": access_token}
 
-@app.post("/logout")
+@router.post("/logout")
 def logout(response: Response):
     # Clear the refresh token cookie
     response.delete_cookie(key="refreshToken")
@@ -174,7 +163,7 @@ def logout(response: Response):
 
 
 # Function to validate protected routes
-@app.get("/guard")
+@router.get("/guard")
 def guard(authorization: str = Header(default="")):
     # Validate access token
     if not authorization.startswith("Bearer "):
@@ -194,8 +183,6 @@ def guard(authorization: str = Header(default="")):
 
     # 401 or other errors
     raise HTTPException(r.status_code, r.text)
-
-#Refactor into more functions
 
 
 
