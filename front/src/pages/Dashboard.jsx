@@ -220,8 +220,8 @@ export default function Dashboard() {
                 </button>
 
                 <button
-                  onClick={() => alert(`Edit ${m.name}`)}
-                  style={actionBtn("#039be5")}
+                  onClick={() => window.location.href = `/edit/${m.name}`}
+                  style={actionBtn("#1976d2")}
                 >
                   ✏️ Edit
                 </button>

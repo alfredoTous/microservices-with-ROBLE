@@ -4,7 +4,10 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./ProtectedRoute";
 import { getAccessToken } from "./api";
-import CrweateMicroservice from "./pages/CreateMicroservice";
+import CreateMicroservice from "./pages/CreateMicroservice";
+import EditMicroservice from "./pages/EditMicroservice";
+
+
 
 export default function App() {
     return (
@@ -33,9 +36,16 @@ export default function App() {
 
         <Route path="create" element={
           <ProtectedRoute>
-            <CrweateMicroservice />
+            <CreateMicroservice />
           </ProtectedRoute>
         } />
+
+        <Route path="/edit/:name" element={
+          <ProtectedRoute>
+            <EditMicroservice />
+          </ProtectedRoute>
+        } />
+
       </Routes>
     </div>
     );

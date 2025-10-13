@@ -129,6 +129,12 @@ def start_microservice(data: dict = Body(...)):
     name = data.get("name", "").strip().lower()
     if not name:
         raise HTTPException(400, "Missing microservice name")
+@router.post("/start-microservice")
+def start_microservice(data: dict = Body(...)):
+    # Start a Docker container for the microservice, building the image if needed
+    name = data.get("name", "").strip().lower()
+    if not name:
+        raise HTTPException(400, "Missing microservice name")
 
     service_path = MICROSERVICES_PATH / name
     if not service_path.exists():
@@ -137,24 +143,65 @@ def start_microservice(data: dict = Body(...)):
     image_name = f"{name}_image"
     container_name = f"{name}_container"
 
-    # Verify if image exists, if not build it
-    images = subprocess.getoutput("docker images --format '{{.Repository}}'").splitlines()
-    if image_name not in images:
-        print(f"[INFO] Image '{image_name}' not found, building...")
-        try:
-            subprocess.run(
-                ["docker", "build", "-t", image_name, str(service_path)],
-                check=True,
-            )
-        except subprocess.CalledProcessError as e:
-            raise HTTPException(500, f"Error building image: {e}")
+    # Always rebuild image (fresh copy of app.py and files)
+    print(f"[INFO] (Re)building image '{image_name}' from latest code...")
+    try:
+        # remove old image if exists (optional, to prevent cache layers)
+        subprocess.run(["docker", "rmi", "-f", image_name], check=False)
+        subprocess.run(
+            ["docker", "build", "--no-cache", "-t", image_name, str(service_path)],
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, f"Error building image: {e}")
 
-    # If container is already running, do nothing
-    containers = subprocess.getoutput("docker ps --format '{{.Names}}'").splitlines()
-    if container_name in containers:
-        return {"ok": True, "message": f"Microservice '{name}' already running."}
+    # If container is already running, stop and remove it (ensure fresh run)
+    subprocess.run(["docker", "rm", "-f", container_name], check=False)
 
-    # If container exists but is stopped, remove it
+    # Run the container
+    try:
+        run = subprocess.run(
+            [
+                "docker", "run", "-d",
+                "--name", container_name,
+                "-p", "0:8000",
+                image_name,
+            ],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        container_id = run.stdout.strip()
+        print(f"[OK] Container {container_name} started ({container_id})")
+
+        return {
+            "ok": True,
+            "message": f"Microservice '{name}' started with latest code.",
+            "container_id": container_id
+        }
+
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, f"Error starting microservice: {e.stderr or e}")
+    service_path = MICROSERVICES_PATH / name
+    if not service_path.exists():
+        raise HTTPException(404, f"Microservice '{name}' not found")
+
+    image_name = f"{name}_image"
+    container_name = f"{name}_container"
+
+    # Always rebuild image (fresh copy of app.py and files)
+    print(f"[INFO] (Re)building image '{image_name}' from latest code...")
+    try:
+        # remove old image if exists (optional, to prevent cache layers)
+        subprocess.run(["docker", "rmi", "-f", image_name], check=False)
+        subprocess.run(
+            ["docker", "build", "--no-cache", "-t", image_name, str(service_path)],
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, f"Error building image: {e}")
+
+    # If container is already running, stop and remove it (ensure fresh run)
     subprocess.run(["docker", "rm", "-f", container_name], check=False)
 
     # Run the container
@@ -231,8 +278,36 @@ def delete_microservice(data: dict = Body(...)):
             shutil.rmtree(service_path)
             print(f"[OK] Folders removed: {service_path}")
 
-        return {"ok": True, "message": f"Microservice '{name}' deleted completaly."}
+        return {"ok": True, "message": f"Microservice '{name}' deleted completely."}
     except Exception as e:
         raise HTTPException(500, f"Error deleting microservice: {e}")
 
+
+@router.get("/edit-microservice")
+def get_microservice_code(name: str):
+    # Returns the content of app.py for editing
+    service_path = MICROSERVICES_PATH / name / "app.py"
+    if not service_path.exists():
+        raise HTTPException(404, f"No app.py found for {name}")
+    with open(service_path, "r", encoding="utf-8") as f:
+        code = f.read()
+    return {"name": name, "code": code}
+
+
+@router.put("/edit-microservice")
+def save_microservice_code(data: dict = Body(...)):
+    # Save the edited code back to app.py
+    name = data.get("name")
+    new_code = data.get("code")
+    if not name or new_code is None:
+        raise HTTPException(400, "Missing name or code")
+
+    service_path = MICROSERVICES_PATH / name / "app.py"
+    if not service_path.exists():
+        raise HTTPException(404, f"No app.py found for {name}")
+
+    with open(service_path, "w", encoding="utf-8") as f:
+        f.write(new_code)
+
+    return {"ok": True, "message": f"Code for microservice {name} updated successfully."}
 
