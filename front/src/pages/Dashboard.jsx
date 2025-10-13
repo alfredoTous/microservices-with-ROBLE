@@ -20,7 +20,7 @@ export default function Dashboard() {
             <p>Only visible if logged in</p> 
             <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
                 <Link to="/create">
-                <button>➕ Agregar microservicio</button>
+                <button>➕ Add Microservice</button>
                 </Link>
                 <button onClick={doLogout}>Logout</button>
             </div>

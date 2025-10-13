@@ -11,11 +11,23 @@ def hello():
   const [log, setLog] = useState("");
   const navigate = useNavigate();
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const microservice = { title, desc, code };
-    setLog(`Microservicio "${title}" creado (simulado).`);
-    setTimeout(() => navigate("/dashboard"), 1500);
+
+    try {
+      const res = await fetch("http://localhost:8000/create-microservice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(microservice),  
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Unknown error");
+      setLog(data.message);
+      setTimeout(() => navigate("/dashboard"), 2500);
+    } catch (err) {
+      setLog(`Error: ${err.message}`);
+    }
   }
 
   return (
@@ -49,7 +61,7 @@ def hello():
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ej: Hello"
+            placeholder="Ej: hello"
             required
             style={{
               background: "#1e1e1e",

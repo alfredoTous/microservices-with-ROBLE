@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .auth import router as auth_router
+from .manage_microservices import router as ms_router
 
 app = FastAPI()
 
@@ -15,4 +16,4 @@ app.add_middleware(
 
 # include auth router 
 app.include_router(auth_router)
-
+app.include_router(ms_router)
