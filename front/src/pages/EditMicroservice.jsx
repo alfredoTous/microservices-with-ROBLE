@@ -7,6 +7,8 @@ export default function EditMicroservice() {
   const [code, setCode] = useState("");
   const [log, setLog] = useState("Loading...");
 
+  const [toast, setToast] = useState(null);
+
   // Get microservice code on load
   useEffect(() => {
     fetch(`http://localhost:8000/edit-microservice?name=${name}`)
@@ -34,9 +36,15 @@ export default function EditMicroservice() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Error at saving microservice");
       setLog(`✅ ${data.message}`);
+      showToast("⚠️ Restart the microservice to apply changes");
     } catch (err) {
       setLog(`❌ ${err.message}`);
     }
+  }
+
+  function showToast(message, color = "#f9a825") {
+    setToast({ message, color });
+    setTimeout(() => setToast(null), 5000);
   }
 
   return (
@@ -87,6 +95,25 @@ export default function EditMicroservice() {
         </button>
       </div>
       <div style={{ marginTop: 10, color: "#aaa" }}>{log}</div>
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            top: 20,
+            right: 20,
+            background: toast.color,
+            color: "#111",
+            padding: "10px 16px",
+            borderRadius: 8,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+            fontWeight: "bold",
+            transition: "opacity 0.5s ease",
+            zIndex: 9999,
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

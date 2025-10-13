@@ -129,12 +129,6 @@ def start_microservice(data: dict = Body(...)):
     name = data.get("name", "").strip().lower()
     if not name:
         raise HTTPException(400, "Missing microservice name")
-@router.post("/start-microservice")
-def start_microservice(data: dict = Body(...)):
-    # Start a Docker container for the microservice, building the image if needed
-    name = data.get("name", "").strip().lower()
-    if not name:
-        raise HTTPException(400, "Missing microservice name")
 
     service_path = MICROSERVICES_PATH / name
     if not service_path.exists():
@@ -176,55 +170,10 @@ def start_microservice(data: dict = Body(...)):
 
         return {
             "ok": True,
-            "message": f"Microservice '{name}' started with latest code.",
+            "message": f"Microservice '{name}' started correctly.", 
             "container_id": container_id
         }
 
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(500, f"Error starting microservice: {e.stderr or e}")
-    service_path = MICROSERVICES_PATH / name
-    if not service_path.exists():
-        raise HTTPException(404, f"Microservice '{name}' not found")
-
-    image_name = f"{name}_image"
-    container_name = f"{name}_container"
-
-    # Always rebuild image (fresh copy of app.py and files)
-    print(f"[INFO] (Re)building image '{image_name}' from latest code...")
-    try:
-        # remove old image if exists (optional, to prevent cache layers)
-        subprocess.run(["docker", "rmi", "-f", image_name], check=False)
-        subprocess.run(
-            ["docker", "build", "--no-cache", "-t", image_name, str(service_path)],
-            check=True,
-        )
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(500, f"Error building image: {e}")
-
-    # If container is already running, stop and remove it (ensure fresh run)
-    subprocess.run(["docker", "rm", "-f", container_name], check=False)
-
-    # Run the container
-    try:
-        run = subprocess.run(
-            [
-                "docker", "run", "-d",
-                "--name", container_name,
-                "-p", "0:8000",
-                image_name,
-            ],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        container_id = run.stdout.strip()
-        print(f"[OK] Container {container_name} started ({container_id})")
-
-        return {
-            "ok": True,
-            "message": f"Microservice '{name}' started correctly.",
-            "container_id": container_id
-        }
     except subprocess.CalledProcessError as e:
         raise HTTPException(500, f"Error starting microservice: {e.stderr or e}")
 
