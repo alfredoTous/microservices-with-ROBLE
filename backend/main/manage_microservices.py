@@ -39,7 +39,7 @@ def create_microservice(data: dict = Body(...)):
             f.write(
                 "\n@app.get('/test')\n"
                 "def test():\n"
-                "    return {'status': 'ok', 'message': 'Microservicio activo'}\n"
+                "    return {'status': 'ok', 'message': 'Microservice active'}\n"
             )
 
         # Create Dockerfile
@@ -132,7 +132,7 @@ def start_microservice(data: dict = Body(...)):
 
     service_path = MICROSERVICES_PATH / name
     if not service_path.exists():
-        raise HTTPException(404, f"Microservicio '{name}' no encontrado")
+        raise HTTPException(404, f"Microservice '{name}' not found")
 
     image_name = f"{name}_image"
     container_name = f"{name}_container"
@@ -215,15 +215,23 @@ def delete_microservice(data: dict = Body(...)):
     service_path = MICROSERVICES_PATH / name
 
     try:
-        # stop and remove container 
+        print(f"[DELETE] Deleting microservice {name}...")
+
+        # Stop and remove container (if exists)
         subprocess.run(["docker", "rm", "-f", container_name], check=False)
-        # remove image
+        print(f"[OK] Container removed: {container_name}")
+
+        # Remove image (if exists)
         subprocess.run(["docker", "rmi", "-f", image_name], check=False)
-        # remove files
+        print(f"[OK] Image removed: {image_name}")
+
+        # Remove files
         if service_path.exists():
             import shutil
             shutil.rmtree(service_path)
-        return {"ok": True, "message": f"Microservice '{name}' deleted comppletely."}
+            print(f"[OK] Folders removed: {service_path}")
+
+        return {"ok": True, "message": f"Microservice '{name}' deleted completaly."}
     except Exception as e:
         raise HTTPException(500, f"Error deleting microservice: {e}")
 

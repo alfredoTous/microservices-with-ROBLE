@@ -15,8 +15,8 @@ export default function Dashboard() {
       const data = await res.json();
       setMicroservices(data.microservices || []);
     } catch (err) {
-      console.error("Error obteniendo microservicios:", err);
-      setLog("Error cargando microservicios");
+      console.error("Error obtaining microservices:", err);
+      setLog("Error loading microservices");
     } finally {
       setLoading(false);
     }
@@ -72,6 +72,27 @@ export default function Dashboard() {
       setLog(`❌ Error: ${err.message}`);
     }
   }
+  // 🗑️Delete microservice
+  async function handleDelete(name) {
+  const confirmed = window.confirm(`Are you sure you want to delete '${name}'?`);
+  if (!confirmed) return;
+
+  setLog(`Deleting microservice ${name}...`);
+  try {
+    const res = await fetch("http://localhost:8000/delete-microservice", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Error removing microservice");
+    setLog(`🗑️ ${data.message}`);
+    fetchMicroservices(); // Refresh list
+  } catch (err) {
+    setLog(`❌ Error: ${err.message}`);
+  }
+}
+
 
   return (
     <div
@@ -219,7 +240,7 @@ export default function Dashboard() {
                 </button>
 
                 <button
-                  onClick={() => alert(`Delete ${m.name}`)}
+                  onClick={() => handleDelete(m.name)}
                   style={actionBtn("#d32f2f")}
                 >
                   🗑️ Delete
