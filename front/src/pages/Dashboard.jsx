@@ -159,6 +159,7 @@ export default function Dashboard() {
               <p style={{ color: "#bbb", fontSize: 14 }}>
                 📄 app.py: {m.has_app ? "✅" : "❌"} <br />
                 🐳 Dockerfile: {m.has_dockerfile ? "✅" : "❌"} <br />
+                🌐 Port: {m.port ? m.port : "—"} <br />
                 Status:{" "}
                 <span
                   style={{
@@ -205,7 +206,13 @@ export default function Dashboard() {
                 </button>
 
                 <button
-                  onClick={() => alert(`Test ${m.name}`)}
+                  onClick={() => {
+                    if (m.running && m.port) {
+                      window.open(`http://localhost:${m.port}/test`, "_blank");
+                    } else {
+                      alert("Mircroservice is not running");
+                    }
+                  }}
                   style={actionBtn("#f9a825")}
                 >
                   🧪 Test

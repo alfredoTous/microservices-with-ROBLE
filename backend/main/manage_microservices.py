@@ -77,21 +77,30 @@ def list_microservices():
     if not MICROSERVICES_PATH.exists():
         return {"microservices": []}
 
-    running_names = set()
+    # Obtains running containers info
     try:
-        ps_output = subprocess.check_output(
-            ["docker", "ps", "--format", "{{.Names}}"],
+        containers_info = subprocess.check_output(
+            ["docker", "ps", "--format", "{{.Names}} {{.Ports}}"],
             text=True,
-            stderr=subprocess.DEVNULL
-        ).strip()
-        if ps_output:
-            running_names = set(ps_output.splitlines())
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(f"[WARN] `docker ps` could not be executed: {e}")
-        running_names = set()
+        ).strip().splitlines()
+    except subprocess.CalledProcessError:
+        containers_info = []
+
+    running_info = {}
+    for line in containers_info:
+        parts = line.split()
+        if len(parts) >= 2:
+            name = parts[0]
+            port_str = " ".join(parts[1:])
+            port = None
+            if "->" in port_str:
+                try:
+                    port = port_str.split("->")[0].split(":")[-1]
+                except Exception:
+                    port = None
+            running_info[name] = {"port": port}
 
     microservices = []
-
     for folder in MICROSERVICES_PATH.iterdir():
         if not folder.is_dir():
             continue
@@ -99,13 +108,16 @@ def list_microservices():
         name = folder.name
         app_file = folder / "app.py"
         docker_file = folder / "Dockerfile"
-        running = f"{name}_container" in running_names
+        container_name = f"{name}_container"
+        running = container_name in running_info
+        port = running_info.get(container_name, {}).get("port")
 
         microservices.append({
             "name": name,
             "has_app": app_file.exists(),
             "has_dockerfile": docker_file.exists(),
             "running": running,
+            "port": port,
             "path": str(folder.resolve())
         })
 
