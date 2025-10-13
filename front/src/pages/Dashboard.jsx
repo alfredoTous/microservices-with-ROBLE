@@ -37,6 +37,23 @@ export default function Dashboard() {
     window.location.href = "/login"; // Redirect to login page
     }
     
+  // ▶️ Turn on microservice
+  async function startService(name) {
+    setLog(`Starting microservice: ${name}...`);
+    try {
+      const res = await fetch("http://localhost:8000/start-microservice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Error at loading microservice");
+      setLog(`✅ ${data.message}`);
+      fetchMicroservices(); // Refresh list
+    } catch (err) {
+      setLog(`❌ Error: ${err.message}`);
+    }
+  }
 
   // ⛔ Turn off microservice
   async function stopService(name) {
