@@ -1,0 +1,51 @@
+
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend/main
+      dockerfile: Dockerfile
+    container_name: roble_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ROBLE_API_BASE_URL=${ROBLE_API_BASE_URL}
+      - ROBLE_PROJECT_NAME=${ROBLE_PROJECT_NAME}
+    volumes:
+      - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - docker_daemon
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: roble_front
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+
+  # Dummy docker to ensrure docker.sock is available
+  docker_daemon:
+    image: docker:dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - /var/lib/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["dockerd-entrypoint.sh"]
+
+networks:
+  default:
+    driver: bridge
