@@ -9,7 +9,8 @@ export default function MicroserviceView() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(`http://localhost:8000/microservices/${name}`);
+        const query = window.location.search;
+        const res = await fetch(`http://localhost:8000/microservices/${name}${query}`);
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.detail || `Error ${res.status}`);

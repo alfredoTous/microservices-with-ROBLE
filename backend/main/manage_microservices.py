@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Body, Response
+from fastapi import APIRouter, HTTPException, Body, Response, Request
 import subprocess
 import requests
 
@@ -34,7 +34,7 @@ def create_microservice(data: dict = Body(...)):
         with open(app_file, "w", encoding="utf-8") as f:
             if description:
                 f.write(f"# {description}\n\n")
-            f.write("from fastapi import FastAPI\n")
+            f.write("from fastapi import FastAPI, Request\n")
             f.write("app = FastAPI()\n\n")
             f.write("@app.get('/')\n")
             f.write(code.strip() + "\n\n")
@@ -262,8 +262,8 @@ def save_microservice_code(data: dict = Body(...)):
 
     return {"ok": True, "message": f"Code for microservice {name} updated successfully."}
 
-@router.get("/microservices/{name}")
-def forward_microservice_root(name: str):
+@router.api_route("/microservices/{name}", methods=["GET", "POST"])
+async def forward_microservice(name: str, request: Request):
     # Forwards the request to the microservice's root endpoint and returns its response
     name = name.strip().lower()
     data = list_microservices()["microservices"]
@@ -277,10 +277,20 @@ def forward_microservice_root(name: str):
     if not port:
         raise HTTPException(400, f"Port of microservice '{name}' not found")
 
+    # Build URL with query parameters
+    query = request.url.query
     url = f"http://localhost:{port}/"
-    print(f"[FORWARD] {name} → {url}")
+    if query:
+        url += f"?{query}"
+
+    #  Forward request
+    headers = dict(request.headers)
     try:
-        r = requests.get(url, timeout=5)
+        if request.method == "POST":
+            body = await request.body()
+            r = requests.post(url, headers=headers, data=body)
+        else:  # GET
+            r = requests.get(url, headers=headers)
         return Response(
             content=r.content,
             status_code=r.status_code,
