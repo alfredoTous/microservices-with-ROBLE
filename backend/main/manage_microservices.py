@@ -279,7 +279,7 @@ async def forward_microservice(name: str, request: Request):
 
     # Build URL with query parameters
     query = request.url.query
-    url = f"http://localhost:{port}/"
+    url = f"http://host.docker.internal:{port}/"
     if query:
         url += f"?{query}"
 
