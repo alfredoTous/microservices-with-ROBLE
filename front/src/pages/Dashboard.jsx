@@ -128,7 +128,7 @@ export default function Dashboard() {
           marginBottom: 20,
         }}
       >
-        <h2>📦 Microservicios activos</h2>
+        <h2>📦 Mircoservices</h2>
         <div style={{ display: "flex", gap: 10 }}>
           <Link to="/create">
             <button

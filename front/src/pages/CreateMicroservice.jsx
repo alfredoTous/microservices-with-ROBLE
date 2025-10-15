@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAccessToken } from "../api"; 
 
 export default function CreateMicroservice() {
   const [title, setTitle] = useState("");
@@ -11,6 +12,16 @@ def hello():
   const [log, setLog] = useState("");
   const navigate = useNavigate();
 
+  // Get Access Token from front memory
+  function handleGetAccessToken() {
+    const token = getAccessToken();
+    if (!token) {
+      setLog("⚠️ No AccessToken");
+    } else {
+      setLog(`AccessToken:\n${token}`);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     const microservice = { title, desc, code };
@@ -19,7 +30,7 @@ def hello():
       const res = await fetch("http://localhost:8000/create-microservice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(microservice),  
+        body: JSON.stringify(microservice),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Unknown error");
@@ -56,7 +67,7 @@ def hello():
         }}
       >
         <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{ fontWeight: 600 }}>Tittle</span>
+          <span style={{ fontWeight: 600 }}>Title</span>
           <input
             type="text"
             value={title}
@@ -113,39 +124,68 @@ def hello():
           />
         </label>
 
-        <button
-          type="submit"
-          style={{
-            background: "#000",
-            color: "#fff",
-            fontWeight: 600,
-            border: "none",
-            borderRadius: 8,
-            padding: "12px 0",
-            cursor: "pointer",
-            fontSize: 16,
-            transition: "all 0.2s ease",
-          }}
-        >
-          Save Microservice
-        </button>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+          <button
+            type="button"
+            onClick={handleGetAccessToken}
+            style={{
+              flex: 1,
+              background: "#ffa500",
+              color: "#000",
+              fontWeight: 600,
+              border: "none",
+              borderRadius: 8,
+              padding: "12px 0",
+              cursor: "pointer",
+              fontSize: 15,
+              transition: "all 0.2s ease",
+            }}
+          >
+            🔑 Get AccessToken
+          </button>
+
+          <button
+            type="submit"
+            style={{
+              flex: 1,
+              background: "#000",
+              color: "#fff",
+              fontWeight: 600,
+              border: "none",
+              borderRadius: 8,
+              padding: "12px 0",
+              cursor: "pointer",
+              fontSize: 16,
+              transition: "all 0.2s ease",
+            }}
+          >
+            Save Microservice
+          </button>
+        </div>
       </form>
 
       {log && (
-        <div
-          style={{
-            background: "#111",
-            color: "#0f0",
-            padding: 12,
-            marginTop: 18,
-            borderRadius: 8,
-            fontFamily: "monospace",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {log}
-        </div>
-      )}
+  <div
+    style={{
+      background: "#111",
+      color: "#0f0",
+      padding: 12,
+      marginTop: 18,
+      borderRadius: 8,
+      fontFamily: "monospace",
+      whiteSpace: "pre-wrap",
+      wordBreak: "break-all",     
+      overflowWrap: "anywhere",    
+      maxHeight: "200px",          
+      overflowY: "auto",          
+      lineHeight: 1.4,
+      textAlign: "left",           
+      transition: "max-height 0.3s ease",
+    }}
+  >
+    {log}
+  </div>
+)}
     </div>
   );
 }
