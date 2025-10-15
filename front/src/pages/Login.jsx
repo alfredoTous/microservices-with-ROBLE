@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { apiFetch, setAccessToken } from "../api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() { 
     const nav = useNavigate();
@@ -11,7 +11,7 @@ export default function Login() {
     // Login function to authenticate user and store Access Token
     async function doLogin(e){
         e.preventDefault();
-        setLog("Logging in...");
+        setLog("🔐 Logging in...");
         const res = await fetch("http://localhost:8000/login", { // Backend listening on port 8000
            method: "POST",
            headers: { "Content-Type": "application/json" },
@@ -21,12 +21,12 @@ export default function Login() {
 
         const data = await res.json();
         if (!res.ok) {
-            setLog(`Login error: ${res.status} ${JSON.stringify(data)}`);
+            setLog(`❌ Login error: ${res.status} ${JSON.stringify(data)}`);
             return;
         }
 
         setAccessToken(data.accessToken || null);
-        setLog("Login successful");
+        setLog("✅ Login successful");
         await new Promise(resolve => setTimeout(resolve, 600)); // Small delay to show success message
         nav("/dashboard", { replace: true }); // Redirect to protected dashboard
     }
@@ -54,27 +54,113 @@ export default function Login() {
         setLog("Token refreshed successfully");
     }
     // Simple UI for login, verify, and refresh
+
     return (
-        <div style={{ maxWidth: 420, margin: "30px auto", fontFamily: "sans-serif" }}>
-            <h2>Auth Front</h2>
-
-            <form onSubmit={doLogin} style={{ display: "grid", gap: 8}}>
-                <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)}/>
-                <input placeholder="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}/>
-                <button type="submit">Login</button>
-            </form>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={doVerify}>Verify Token</button>
-                <button onClick={doRefresh}>Refresh Token</button>
-            </div>
-
-            <pre style={{ background: "#111", color: "#0f0", padding: 10, marginTop: 12, whiteSpace: "pre-wrap" }}>
-                {log}
-            </pre>
-
+        <div
+          style={{
+            background: "#161b22",
+            padding: 30,
+            borderRadius: 12,
+            boxShadow: "0 0 25px rgba(0,0,0,0.4)",
+            width: "100%",
+            maxWidth: 420,
+            color: "#eee",
+            margin: "80px auto",
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <h2 style={{ textAlign: "center", marginBottom: 20 }}>🔑 Login</h2>
+    
+          <form
+            onSubmit={doLogin}
+            style={{ display: "flex", flexDirection: "column", gap: 12 }}
+          >
+            <input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={inputStyle}
+            />
+            <input
+              placeholder="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={inputStyle}
+            />
+            <button type="submit" style={mainButton("#238636")}>
+              Sign in
+            </button>
+          </form>
+    
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              justifyContent: "space-between",
+              marginTop: 12,
+            }}
+          >
+            <button onClick={doVerify} style={miniBtn("#1e88e5")}>
+              Verify
+            </button>
+            <button onClick={doRefresh} style={miniBtn("#f9a825")}>
+              Refresh
+            </button>
+          </div>
+    
+          <p style={{ textAlign: "center", marginTop: 15, color: "#888" }}>
+            Don’t have an account?{" "}
+            <Link to="/register" style={{ color: "#58a6ff", textDecoration: "none" }}>
+              Register
+            </Link>
+          </p>
+    
+          {log && (
+            <pre style={logBox}>{log}</pre>
+          )}
         </div>
-        
-    );
-
-}
+      );
+    }
+    
+    const inputStyle = {
+      background: "#0d1117",
+      color: "#eee",
+      border: "1px solid #30363d",
+      borderRadius: 8,
+      padding: "10px",
+      fontSize: 15,
+      outline: "none",
+      transition: "border 0.2s",
+    };
+    
+    const mainButton = (color) => ({
+      background: color,
+      border: "none",
+      borderRadius: 8,
+      padding: "10px 0",
+      color: "#fff",
+      fontWeight: 600,
+      cursor: "pointer",
+      transition: "background 0.3s",
+    });
+    
+    const miniBtn = (color) => ({
+      background: color,
+      border: "none",
+      borderRadius: 6,
+      padding: "8px 12px",
+      color: "#fff",
+      fontWeight: 600,
+      cursor: "pointer",
+    });
+    
+    const logBox = {
+      background: "#0c0c0c",
+      color: "#00ff9f",
+      padding: 12,
+      borderRadius: 8,
+      marginTop: 16,
+      whiteSpace: "pre-wrap",
+      wordBreak: "break-all",
+    };
